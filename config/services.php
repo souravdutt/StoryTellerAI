@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'workers' => [
+        'ai' => [
+            'model_id' => env('WORKERS_MODEL_ID', '@cf/meta/llama-3.1-8b-instruct'),
+            'account_id' => env('WORKERS_ACCOUNT_ID'),
+            'api_token' => env('WORKERS_API_TOKEN'),
+        ]
+    ]
+
 ];
