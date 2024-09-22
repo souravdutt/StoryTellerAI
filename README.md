@@ -5,7 +5,7 @@ This is a Laravel 11 web app having integrated Cloudflare Workers AI that write 
 Main reason is, it offers unlimited API requests (at least while creating this app, but not sure about future) for any model that is in beta, and free 10K Neurons/month for stable models. So you can create and test as many apps without any worry about the request limits or tokens.
 
 ## Demo!
-![StoryTellerAI-demo](https://github.com/user-attachments/assets/150e0be3-3975-4b16-88af-c15a9ac793c6)
+<img src="https://github.com/user-attachments/assets/513eced0-c361-446a-92eb-aa44d25bcc8e" alt="StoryTellerAI-demo" width="520">
 
 ## Pre-requirements
 - WAMP/LAMP/XAMP (You will love <a href="https://laragon.org/download/">Laragon</a>)
