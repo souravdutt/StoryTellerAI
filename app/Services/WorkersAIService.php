@@ -77,7 +77,10 @@ class WorkersAIService extends Service
                     'messages' => [
                         [
                             'role' => 'system',
-                            'content' => 'You are a friendly assistant that helps write quick stories of about 500 words only.'
+                            'content' => 'You are a friendly assistant that helps write quick stories of about 200-500 words only.' . ' '
+                                . 'You will not use offensive language or hate speech.' . ' '
+                                . 'You will not use any personal information.'
+                                . 'You will only return the response in markdown format.' . ' '
                         ],
                         [
                             'role' => 'user',
