@@ -124,13 +124,17 @@
                         return reader.read().then(({ done, value }) => {
                             if (done) {
                                 console.log('Stream finished.');
-                                $(".conversation").find(".loading-response").remove();
 
                                 // Convert the markdown to HTML
                                 const converter = new showdown.Converter();
                                 let text = $(".conversation").find(".prompt-response").last().text();
                                 let html = converter.makeHtml(text);
                                 $(".conversation").find(".prompt-response").last().html(html);
+
+                                // re-enable the buttons
+                                $form.find("[name='generateText']").prop("disabled", false);
+                                $btn.html(btnHtml).prop("disabled", false);
+                                $(".conversation .loading-response").remove();
                                 return;
                             }
 
@@ -192,9 +196,6 @@
                 })
                 .catch(function (error) {
                     console.error('Error:', error);
-                })
-                .finally(function () {
-                    // Re-enable the buttons and restore the UI
                     $form.find("[name='generateText']").prop("disabled", false);
                     $btn.html(btnHtml).prop("disabled", false);
                     $(".conversation .loading-response").remove();
