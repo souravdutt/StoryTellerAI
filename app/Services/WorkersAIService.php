@@ -9,7 +9,7 @@ class WorkersAIService extends Service
 {
     protected $baseUrl;
     protected $apiKey;
-    protected int $timeout = 600;
+    protected int $timeout = 120;
 
     public function __construct()
     {
@@ -45,7 +45,7 @@ class WorkersAIService extends Service
                 echo $chunk;
 
                 // Flush the output buffer to send data to the client immediately
-                ob_flush();
+                if (ob_get_level() > 0) ob_flush();
                 flush();
             }
 
