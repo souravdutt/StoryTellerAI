@@ -11,6 +11,18 @@
         pre {
             font-family: unset;
             text-wrap: unset;
+            line-height: normal;
+        }
+        pre ol, pre ul {
+            line-height: normal;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 0;
+        }
+
+        pre h1, pre h2, pre h3, pre h4, pre h5, pre h6, pre p {
+            margin-bottom: 0.5rem;
         }
 
         .max-w-75 {
@@ -68,11 +80,13 @@
                 $(".conversation").append("<div class='prompt bg-light rounded max-w-75 w-100 p-2 mb-2 border ms-auto'>" + $form.find("[name='generateText']").val() + "</div>");
 
                 $(".conversation").append("<pre class='prompt-response bg-light rounded max-w-75 w-100 p-2 mb-2 border'></pre>")
-                $(".conversation").find(".prompt-response").last().append("<span class='loading-response'><span class='spinner-grow spinner-grow-sm'></span></span>");
+
+                const $lastResponse = $(".conversation").find(".prompt-response").last();
+                $lastResponse.append("<span class='loading-response'><span class='spinner-grow spinner-grow-sm'></span></span>");
 
                 $(".output-container").find(".alert").remove();
 
-                let scrollTo = $(".conversation").find(".prompt-response").last()[0].scrollTop;
+                let scrollTo = $lastResponse[0].offsetTop;
                 $(".output-container").scrollTop(scrollTo);
 
                 // Create a new EventSource for the stream
@@ -116,10 +130,16 @@
                     const reader = response.getReader();
                     const decoder = new TextDecoder("utf-8");
 
+                    let scrolledByUser = false;
                     let prevLastLine = "";
 
+                    // check if user scrolled in the output container
+                    document.querySelector(".output-container").addEventListener("DOMMouseScroll", () => { scrolledByUser = true; })
+                    document.querySelector(".output-container").addEventListener("mousewheel", () => { scrolledByUser = true; })
+                    document.querySelector(".output-container").addEventListener("wheel", () => { scrolledByUser = true; })
+
                     function readStream() {
-                        $(".conversation").find(".prompt-response").last().append("<span class='loading-response'> <span class='spinner-grow spinner-grow-sm'></span></span>");
+                        $lastResponse.append("<span class='loading-response'> <span class='spinner-grow spinner-grow-sm'></span></span>");
 
                         return reader.read().then(({ done, value }) => {
                             if (done) {
@@ -127,9 +147,14 @@
 
                                 // Convert the markdown to HTML
                                 const converter = new showdown.Converter();
-                                let text = $(".conversation").find(".prompt-response").last().text();
+                                let text = $lastResponse.text();
                                 let html = converter.makeHtml(text);
-                                $(".conversation").find(".prompt-response").last().html(html);
+                                $lastResponse.html(html);
+
+                                if (!scrolledByUser) {
+                                    // Scroll to the bottom
+                                    $(".output-container").scrollTop(scrollTo + $lastResponse[0].offsetHeight);
+                                }
 
                                 // re-enable the buttons
                                 $form.find("[name='generateText']").prop("disabled", false);
@@ -176,13 +201,17 @@
 
                                             if (parsedData.response) {
                                                 // Append the response text to the output element
-                                                $(".conversation").find(".prompt-response").last().append(parsedData.response);
+                                                $lastResponse.append(parsedData.response);
                                             }
                                         } catch (error) {
                                             console.error("Error parsing chunk:", error);
                                         }
 
                                         $(".conversation .loading-response").remove();
+
+                                        if (!scrolledByUser) {
+                                            $(".output-container").scrollTop(scrollTo + $lastResponse[0].offsetHeight);
+                                        }
                                     }
                                 }
                             });
