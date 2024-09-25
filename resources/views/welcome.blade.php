@@ -49,7 +49,7 @@
                             <form class="generate-story-form d-flex flex-column">
                                 @csrf
                                 <textarea class="form-control" style="resize: none" placeholder="Give a topic and AI will generate a story for you..." name="generateText" cols="30" rows="3"></textarea>
-                                <button class="btn btn-dark mt-2 ms-auto">Generate</button>
+                                <button type="submit" class="btn btn-dark mt-2 ms-auto">Generate</button>
                             </form>
                         </div>
                     </div>
@@ -59,41 +59,43 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/js/all.min.js" integrity="sha512-6sSYJqDreZRZGkJ3b+YfdhB3MzmuP9R7X1QZ6g5aIXhRvR1Y/N/P47jmnkENm7YL3oqsmI6AK+V6AD99uWDnIw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.0.0/showdown.min.js"></script>
 
     <script>
-        $(document).ready(function() {
-            $(".generate-story-form").on("submit", function(e) {
+        document.addEventListener("DOMContentLoaded", function() {
+
+            document.querySelector(".generate-story-form").addEventListener("submit", function(e) {
                 e.preventDefault();
-                const $form = $(this);
-                const $btn = $form.find(":submit");
-                const btnHtml = $btn.html();
+                const form = this;
+                const btn = form.querySelector("[type='submit']");
+                const btnHtml = btn.innerHTML;
 
                 // Disable the button during request
-                $form.find("[name='generateText']").prop("disabled", true);
-                $btn.html("<span class='spinner-grow spinner-grow-sm'></span>").prop("disabled", true);
+                form.querySelector("[name='generateText']").disabled = true;
+                btn.innerHTML = "<span class='spinner-grow spinner-grow-sm'></span>";
+                btn.disabled = true;
 
                 // Reset the output container
-                $(".output-container").removeClass("d-none");
-                $(".conversation").append("<div class='prompt bg-light rounded max-w-75 w-100 p-2 mb-2 border ms-auto'>" + $form.find("[name='generateText']").val() + "</div>");
+                document.querySelector(".output-container").classList.remove("d-none");
+                const conversation = document.querySelector(".conversation");
+                conversation.insertAdjacentHTML("beforeend", "<div class='prompt bg-light rounded max-w-75 w-100 p-2 mb-2 border ms-auto'>" + form.querySelector("[name='generateText']").value + "</div>");
+                conversation.insertAdjacentHTML("beforeend", "<pre class='prompt-response bg-light rounded max-w-75 w-100 p-2 mb-2 border'></pre>");
 
-                $(".conversation").append("<pre class='prompt-response bg-light rounded max-w-75 w-100 p-2 mb-2 border'></pre>")
+                const lastResponse = conversation.querySelectorAll(".prompt-response").item(conversation.querySelectorAll(".prompt-response").length - 1);
+                lastResponse.insertAdjacentHTML("beforeend", "<span class='loading-response'><span class='spinner-grow spinner-grow-sm'></span></span>");
 
-                const $lastResponse = $(".conversation").find(".prompt-response").last();
-                $lastResponse.append("<span class='loading-response'><span class='spinner-grow spinner-grow-sm'></span></span>");
+                document.querySelectorAll(".output-container .alert").forEach(function(alert) {
+                    alert.remove();
+                });
 
-                $(".output-container").find(".alert").remove();
+                let scrollTo = lastResponse.offsetTop;
+                document.querySelector(".output-container").scrollTop = scrollTo;
 
-                let scrollTo = $lastResponse[0].offsetTop;
-                $(".output-container").scrollTop(scrollTo);
-
-                // Create a new EventSource for the stream
+                // Data for the request
                 const data = {
-                    generateText: $form.find("[name='generateText']").val(),
-                }
-                // let eventSource = new EventSource("{{ route('generate-text') }}?" + formData);
+                    generateText: form.querySelector("[name='generateText']").value,
+                };
 
                 // Send the POST request with fetch for SSE
                 fetch('/generate-text', {
@@ -106,15 +108,15 @@
                     body: JSON.stringify(data), // Send form data directly as JSON
                 })
                 .then(function (response) {
-                    // Check for validation errors
                     if (!response.ok) {
-                        $(".conversation .loading-response").remove();
+                        document.querySelector(".conversation .loading-response")?.remove();
 
                         if (response.status === 422) {
                             return response.json().then(function (errors) {
                                 console.log('Validation errors:', errors);
                                 for (let field in errors) {
-                                    $("<div class='alert alert-danger'>" + errors[field] + "</div>").insertAfter($(".conversation"));
+                                    const errorMessage = "<div class='alert alert-danger'>" + errors[field] + "</div>";
+                                    conversation.insertAdjacentHTML("afterend", errorMessage);
                                 }
                             });
                         } else {
@@ -133,43 +135,39 @@
                     let scrolledByUser = false;
                     let prevLastLine = "";
 
-                    // check if user scrolled in the output container
-                    document.querySelector(".output-container").addEventListener("DOMMouseScroll", () => { scrolledByUser = true; })
-                    document.querySelector(".output-container").addEventListener("mousewheel", () => { scrolledByUser = true; })
-                    document.querySelector(".output-container").addEventListener("wheel", () => { scrolledByUser = true; })
+                    // Detect user scroll in the output container
+                    document.querySelector(".output-container").addEventListener("wheel", () => { scrolledByUser = true; });
+                    document.querySelector(".output-container").addEventListener("mousewheel", () => { scrolledByUser = true; });
+                    document.querySelector(".output-container").addEventListener("DOMMouseScroll", () => { scrolledByUser = true; });
 
                     function readStream() {
-                        $lastResponse.append("<span class='loading-response'> <span class='spinner-grow spinner-grow-sm'></span></span>");
+                        lastResponse.insertAdjacentHTML("beforeend", "<span class='loading-response'> <span class='spinner-grow spinner-grow-sm'></span></span>");
 
                         return reader.read().then(({ done, value }) => {
                             if (done) {
                                 console.log('Stream finished.');
 
-                                // Convert the markdown to HTML
+                                // Convert markdown to HTML
                                 const converter = new showdown.Converter();
-                                let text = $lastResponse.text();
+                                let text = lastResponse.textContent;
                                 let html = converter.makeHtml(text);
-                                $lastResponse.html(html);
+                                lastResponse.innerHTML = html;
 
                                 if (!scrolledByUser) {
-                                    // Scroll to the bottom
-                                    $(".output-container").scrollTop(scrollTo + $lastResponse[0].offsetHeight);
+                                    document.querySelector(".output-container").scrollTop = scrollTo + lastResponse.offsetHeight;
                                 }
 
-                                // re-enable the buttons
-                                $form.find("[name='generateText']").prop("disabled", false);
-                                $btn.html(btnHtml).prop("disabled", false);
-                                $(".conversation .loading-response").remove();
+                                // Re-enable the buttons
+                                form.querySelector("[name='generateText']").disabled = false;
+                                btn.innerHTML = btnHtml;
+                                btn.disabled = false;
+                                document.querySelector(".conversation .loading-response")?.remove();
                                 return;
                             }
 
-                            // Decode the chunk into text
                             const chunk = decoder.decode(value, { stream: true });
-
-                            // Split the chunk by newlines (SSE uses `\n\n` for each event)
                             const lines = chunk.split("\n\n");
 
-                            // get last line
                             let firstLine = lines[0];
                             let lastLine = lines[lines.length - 1];
 
@@ -185,38 +183,33 @@
                                 lines.pop();
                             }
 
-                            // Process each line to see if it's a data event
-                            lines.forEach((line, k) => {
-                                $(".conversation").find(".loading-response").first().remove();
+                            lines.forEach(line => {
+                                document.querySelector(".conversation .loading-response")?.remove();
                                 if (line.startsWith("data: ")) {
-                                    let buffer = line.replace("data: ", ""); // Add the current chunk to the buffer
+                                    let buffer = line.replace("data: ", "");
 
                                     if (buffer === "[DONE]") {
                                         console.log("Stream completed");
-                                        $form.find("[name='generateText']").val('');
+                                        form.querySelector("[name='generateText']").value = '';
                                     } else {
-                                        // Parse the JSON data
                                         try {
                                             const parsedData = JSON.parse(buffer);
-
                                             if (parsedData.response) {
-                                                // Append the response text to the output element
-                                                $lastResponse.append(parsedData.response);
+                                                lastResponse.insertAdjacentHTML("beforeend", parsedData.response);
                                             }
                                         } catch (error) {
                                             console.error("Error parsing chunk:", error);
                                         }
 
-                                        $(".conversation .loading-response").remove();
+                                        document.querySelector(".conversation .loading-response")?.remove();
 
                                         if (!scrolledByUser) {
-                                            $(".output-container").scrollTop(scrollTo + $lastResponse[0].offsetHeight);
+                                            document.querySelector(".output-container").scrollTop = scrollTo + lastResponse.offsetHeight;
                                         }
                                     }
                                 }
                             });
 
-                            // Recursively read the next chunk
                             return readStream();
                         });
                     }
@@ -225,12 +218,14 @@
                 })
                 .catch(function (error) {
                     console.error('Error:', error);
-                    $form.find("[name='generateText']").prop("disabled", false);
-                    $btn.html(btnHtml).prop("disabled", false);
-                    $(".conversation .loading-response").remove();
+                    form.querySelector("[name='generateText']").disabled = false;
+                    btn.innerHTML = btnHtml;
+                    btn.disabled = false;
+                    document.querySelector(".conversation .loading-response")?.remove();
                 });
             });
         });
+
     </script>
 </body>
 </html>
